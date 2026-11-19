@@ -108,7 +108,7 @@ input[type=color]{width:34px;height:30px;padding:0;border:1px solid var(--line);
 <body>
 <div class="app">
   <div class="stage"><canvas id="game" width="960" height="540" aria-label="Fox Borne"></canvas></div>
-  <p class="keys"><span><b>A D</b> andar</span><span><b>↑</b> subir escada</span><span><b>Espaço</b> pular</span><span><b>J</b> golpe</span><span><b>K</b> golpe forte</span><span><b>L / Shift</b> rolar</span><span><b>I</b> escudo</span><span><b>Q</b> frasco</span><span><b>E</b> usar</span><span><b>Esc</b> pausa</span></p>
+  <p class="keys"><span><b>A D</b> andar</span><span><b>Espaço</b> pular</span><span><b>J</b> golpe</span><span><b>K</b> golpe forte</span><span><b>L / Shift</b> rolar</span><span><b>I</b> escudo</span><span><b>Q</b> frasco</span><span><b>E</b> usar</span><span><b>Esc</b> pausa</span></p>
 </div>
 
 <button class="pausebtn" id="b-pausetouch" aria-label="Pausa">II</button>
@@ -137,7 +137,6 @@ input[type=color]{width:34px;height:30px;padding:0;border:1px solid var(--line);
     </div>
     <dl class="controls">
       <dt>A / D ou setas</dt><dd>andar</dd>
-      <dt>↑ ou direcional para cima</dt><dd>subir na base da escada</dd>
       <dt>Espaço ou W</dt><dd>pular</dd>
       <dt>J</dt><dd>golpe rápido, até três em sequência</dd>
       <dt>K</dt><dd>golpe forte, derruba inimigos comuns</dd>
@@ -192,8 +191,6 @@ const SOL0=[{x:0,w:1500,y:440},{x:1620,w:980,y:440},{x:2600,w:600,y:380},{x:3330
 const PLAT0=[{x:900,w:120,y:345},{x:1900,w:170,y:340},{x:2760,w:120,y:285},{x:3600,w:180,y:280},{x:4600,w:170,y:340},{x:5420,w:130,y:345}];
 const BRAZ0=[{x:150,y:440},{x:3420,y:380},{x:6060,y:440}];
 const SHARD0=[{x:960,y:345},{x:2820,y:285},{x:5485,y:345},{x:4060,y:380}];
-const ladder={x:930,bottom:440,top:345};
-const atLadderBase=()=>P.onGround&&Math.abs(P.x-ladder.x)<=18&&Math.abs(P.y-ladder.bottom)<=3;
 const SOL=[],PLAT=[],BRAZ=[],SHARDS=[];
 for(let k=0;k<NZ;k++){const sh=a=>a.map(s=>Object.assign({},s,{x:s.x+k*ZONE}));SOL.push(...sh(SOL0));PLAT.push(...sh(PLAT0));BRAZ.push(...sh(BRAZ0));SHARDS.push(...sh(SHARD0));}
 /* Each zone ends in a fog-gated arena with its own boss. */
@@ -416,7 +413,7 @@ const SFX={swing:()=>noise(.12,.07,1800),hit:()=>{noise(.1,.16,700);tone(110,.1,
 
 /* ---------- input ---------- */
 const keys={},pressed={};
-const MAP={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',Space:'jump',KeyW:'jump',ArrowUp:'up',ShiftLeft:'roll',ShiftRight:'roll',KeyL:'roll',KeyJ:'atk',KeyK:'heavy',KeyQ:'heal',KeyR:'heal',KeyE:'use',KeyI:'block',KeyS:'block',ArrowDown:'block',Escape:'pause',KeyP:'pause'};
+const MAP={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',Space:'jump',KeyW:'jump',ArrowUp:'jump',ShiftLeft:'roll',ShiftRight:'roll',KeyL:'roll',KeyJ:'atk',KeyK:'heavy',KeyQ:'heal',KeyR:'heal',KeyE:'use',KeyI:'block',KeyS:'block',ArrowDown:'block',Escape:'pause',KeyP:'pause'};
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;const k=MAP[e.code];if(!k)return;if(mode==='play'||mode==='pause')e.preventDefault();if(!keys[k])pressed[k]=true;keys[k]=true;audioInit()});
 addEventListener('keyup',e=>{const k=MAP[e.code];if(k)keys[k]=false});
 addEventListener('blur',()=>{for(const k in keys)keys[k]=false});
@@ -426,10 +423,8 @@ for(const b of document.querySelectorAll('#touch button')){const k=b.dataset.k;
 
 {const stick=$('stick'),knob=$('knob');let sid=null;
   const mv=e=>{const r=stick.getBoundingClientRect(),dx=clamp((e.clientX-r.left-r.width/2)/40,-1,1),dy=clamp((e.clientY-r.top-r.height/2)/40,-1,1);
-    knob.style.transform='translate('+dx*34+'px,'+dy*34+'px)';const up=dy<-.55&&Math.abs(dx)<.65;
-    if(up&&!keys.stickUp)pressed.stickUp=true;
-    keys.stickUp=up;keys.left=dx<-.3;keys.right=dx>.3;};
-  const end=e=>{if(e.pointerId!==sid)return;sid=null;knob.style.transform='';keys.left=keys.right=keys.stickUp=false;};
+    knob.style.transform='translate('+dx*34+'px,'+dy*34+'px)';keys.left=dx<-.3;keys.right=dx>.3;};
+  const end=e=>{if(e.pointerId!==sid)return;sid=null;knob.style.transform='';keys.left=keys.right=false;};
   stick.addEventListener('pointerdown',e=>{e.preventDefault();audioInit();sid=e.pointerId;try{stick.setPointerCapture(sid)}catch(_){}mv(e)});
   stick.addEventListener('pointermove',e=>{if(e.pointerId===sid)mv(e)});
   stick.addEventListener('pointerup',end);stick.addEventListener('pointercancel',end);stick.addEventListener('contextmenu',e=>e.preventDefault());}
@@ -472,9 +467,7 @@ function respawn(){if(S.cinzas>0){drop={x:safe.x,y:safe.y,n:S.cinzas};S.cinzas=0
 const gate=()=>{const k=S.dead.indexOf(false);return k<0?null:ARENAS[k]};
 const nearFog=()=>{const g=gate();return !!g&&arena<0&&P.x>g.x0-80&&P.x<g.x0};
 function nearBrazier(){for(let i=0;i<BRAZ.length;i++)if(Math.abs(BRAZ[i].x-P.x)<56&&Math.abs(BRAZ[i].y-P.y)<12)return i;return -1}
-function captureInput(){
-  if(pressed.up&&!atLadderBase()&&P.state!=='climb')pressed.jump=true;
-  for(const k of ['atk','heavy','roll','jump'])if(pressed[k]){P.buf=k;P.bufT=.2}}
+function captureInput(){for(const k of ['atk','heavy','roll','jump'])if(pressed[k]){P.buf=k;P.bufT=.2}}
 function updatePlayer(dt){
   P.anim+=dt;P.inv=Math.max(0,P.inv-dt);P.slow=Math.max(0,(P.slow||0)-dt);const wasBlock=P.blocking;P.blocking=false;
   if(P.dead){P.deadT+=dt;P.vx*=.9;if(P.y<H+200)moveEntity(P,dt);
@@ -488,9 +481,7 @@ function updatePlayer(dt){
   if(P.state==='free'){
     P.blocking=!!(keys.block&&P.onGround&&look.shield>0);
     P.vx+=(mv*SPEED*(P.blocking?.4:1)*(P.slow>0?.45:1)-P.vx)*Math.min(1,dt*(P.onGround?14:7));if(mv)P.face=mv;
-    if((pressed.up||pressed.stickUp)&&atLadderBase()){
-      Object.assign(P,{state:'climb',x:ladder.x,vx:0,vy:0,onGround:false,blocking:false,buf:null});
-    }else if(P.buf==='jump'&&P.coyote>0){P.vy=-JUMP;P.coyote=0;P.buf=null;P.onGround=false;}
+    if(P.buf==='jump'&&P.coyote>0){P.vy=-JUMP;P.coyote=0;P.buf=null;P.onGround=false;}
     else if(P.buf==='roll'&&P.onGround&&P.st>0)startRoll(mv);
     else if((P.buf==='atk'||P.buf==='heavy')&&P.st>0)startAttack(P.buf==='heavy',1);
     else if(pressed.heal&&P.flasks>0&&P.hp<maxHp()){P.state='heal';P.t=0;P.healed=false;P.flasks--;}
@@ -498,11 +489,11 @@ function updatePlayer(dt){
   }else if(P.state==='atk'){
     P.t+=dt;const{aw,aa,ar}=P;if(P.onGround)P.vx*=Math.pow(.001,dt);
     if(P.t>=aw&&P.t<aw+aa){if(!P.swung){P.swung=true;SFX.swing();if(P.onGround)P.vx=P.face*(P.heavy?170:110);}attackHits();}
-    if(P.t>=aw+aa+ar*.45&&P.buf){
+    if(P.t>=aw+aa+ar)P.state='free';
+    else if(P.t>=aw+aa+ar*.45&&P.buf){
       if(P.buf==='roll'&&P.onGround&&P.st>0)startRoll(mv);
       else if(P.buf==='atk'&&!P.heavy&&P.combo<3&&P.st>0){if(mv)P.face=mv;startAttack(false,P.combo+1);}
       else if(P.buf==='heavy'&&P.st>0){if(mv)P.face=mv;startAttack(true,1);}}
-    if(P.state==='atk'&&P.t>=aw+aa+ar)P.state='free';
   }else if(P.state==='roll'){P.t+=dt;P.vx=P.rdir*ROLL*(1-.5*P.t/RDUR);if(P.t>=RDUR)P.state='free';}
   else if(P.state==='hurt'){P.t+=dt;P.vx*=.92;if(P.t>=.32)P.state='free';}
   else if(P.state==='fog'){P.t+=dt;P.vx=75;P.inv=.4;if(Math.random()<.5)spark(P.x+rnd(-8,8),P.y-rnd(10,60),1,'#cfd8d4',40,.6,-20);
@@ -511,10 +502,7 @@ function updatePlayer(dt){
   else if(P.state==='heal'){P.t+=dt;P.vx=mv*50;if(mv)P.face=mv;
     if(!P.healed&&P.t>=.5){P.healed=true;P.hp=Math.min(maxHp(),P.hp+maxHp()*.4+20);P.rally=0;SFX.heal();spark(P.x,P.y-40,14,'#e89a3c',120,.7,-200);}
     if(P.t>=.8)P.state='free';}
-  if(P.state==='climb'){
-    P.y=Math.max(ladder.top,P.y-140*dt);
-    if(P.y===ladder.top){P.state='free';P.onGround=true;}
-  }else moveEntity(P,dt);
+  moveEntity(P,dt);
   if(arena>=0){const a=ARENAS[arena];P.x=clamp(P.x,a.x0+18,a.x1-18);if(walls)P.x=clamp(P.x,walls.l+16,walls.r-16);}
   else{const g=gate();if(g&&P.state!=='fog')P.x=Math.min(P.x,g.x0-14);}
   if(P.onGround&&P.state==='free'&&supported(P.x,P.y))safe={x:P.x,y:P.y};
@@ -913,12 +901,6 @@ function render(dt){
   ctx.save();const sx=reduceMotion?0:rnd(-shake,shake),sy=reduceMotion?0:rnd(-shake,shake);ctx.translate(Math.round(-cam+sx),Math.round(sy));
   for(const d of decor)if(d.x>cam-120&&d.x<cam+W+120)drawDecor(d);
   drawGround();
-  if(ladder.x>=cam-12&&ladder.x<=cam+W+12){
-    ctx.fillStyle='#6d5844';
-    for(const offset of [-9,7])ctx.fillRect(ladder.x+offset,ladder.top-5,3,ladder.bottom-ladder.top+5);
-    ctx.fillStyle='#ac9272';
-    for(let y=ladder.top+2;y<ladder.bottom;y+=12)ctx.fillRect(ladder.x-7,y,15,3);
-  }
   BRAZ.forEach((b,i)=>drawBrazier(b,S.lit[i]));
   SHARDS.forEach((s,i)=>{if(S.got.includes(i))return;const y=s.y-24+Math.sin(time*3+i)*4;ctx.fillStyle='rgba(160,215,255,.25)';ctx.beginPath();ctx.arc(s.x,y,13,0,7);ctx.fill();ctx.fillStyle='#cfeaff';ctx.beginPath();ctx.moveTo(s.x,y-8);ctx.lineTo(s.x+5,y);ctx.lineTo(s.x,y+8);ctx.lineTo(s.x-5,y);ctx.fill();});
   if(drop){const y=drop.y-22,r=14+Math.sin(time*4)*3,g=ctx.createRadialGradient(drop.x,y,1,drop.x,y,r*2.4);g.addColorStop(0,'rgba(155,224,192,.9)');g.addColorStop(1,'rgba(155,224,192,0)');ctx.fillStyle=g;ctx.fillRect(drop.x-40,y-40,80,80);}
